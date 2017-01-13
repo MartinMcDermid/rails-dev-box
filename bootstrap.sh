@@ -37,17 +37,29 @@ sudo -u postgres createuser --superuser ubuntu
 sudo -u postgres createdb -O ubuntu activerecord_unittest
 sudo -u postgres createdb -O ubuntu activerecord_unittest2
 
-debconf-set-selections <<< 'mysql-server mysql-server/root_password password root'
-debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password root'
-install MySQL mysql-server libmysqlclient-dev
-mysql -uroot -proot <<SQL
-CREATE USER 'rails'@'localhost';
-CREATE DATABASE activerecord_unittest  DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
-CREATE DATABASE activerecord_unittest2 DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
-GRANT ALL PRIVILEGES ON activerecord_unittest.* to 'rails'@'localhost';
-GRANT ALL PRIVILEGES ON activerecord_unittest2.* to 'rails'@'localhost';
-GRANT ALL PRIVILEGES ON inexistent_activerecord_unittest.* to 'rails'@'localhost';
-SQL
+# install openjdk-7 
+sudo apt-get purge openjdk*
+sudo apt-get -y install openjdk-7-jdk
+
+# install ES
+wget -qO - https://packages.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
+echo "deb http://packages.elastic.co/elasticsearch/2.x/debian stable main | sudo tee -a /etc/apt/sources.list.d/elasticsearch-2.x.list"
+sudo apt-get update && sudo apt-get install elasticsearch
+sudo update-rc.d elasticsearch defaults 95 10
+sudo /etc/init.d/elasticsearch start
+
+# enable dynamic scripting
+sudo echo "script.inline: on" >> /etc/elasticsearch/elasticsearch.yml
+sudo echo "script.indexed: on" >> /etc/elasticsearch/elasticsearch.yml
+# enable cors (to be able to use Sense)
+sudo echo "http.cors.enabled: true" >> /etc/elasticsearch/elasticsearch.yml
+sudo echo "http.cors.allow-origin: /https?:\/\/.*/" >> /etc/elasticsearch/elasticsearch.yml
+sudo /etc/init.d/elasticsearch restart
+
+# either of the next two lines is needed to be able to access "localhost:9200" from the host os
+sudo echo "network.bind_host: 0" >> /etc/elasticsearch/elasticsearch.yml
+sudo echo "network.host: 0.0.0.0" >> /etc/elasticsearch/elasticsearch.yml
+
 
 install 'Nokogiri dependencies' libxml2 libxml2-dev libxslt1-dev
 install 'Blade dependencies' libncurses5-dev
